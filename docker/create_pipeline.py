@@ -173,4 +173,11 @@ df2 = df2.loc[mask].reset_index(drop=True)
 
 # 7) Entrenar y serializar
 pipeline.fit(df2, df2['RainTomorrow'])
+
+# Evaluar el pipeline en el conjunto completo
+X_all = df2.drop(columns=['RainTomorrow'])
+y_all = df2['RainTomorrow']
+train_score = pipeline.score(X_all, y_all)
+print(f"Train score: {train_score:.4f}")
+
 joblib.dump(pipeline, 'pipeline.pkl')

@@ -1,0 +1,20 @@
+# 1) Imagen base con Python 3.10 slim
+FROM python:3.10-slim
+
+RUN apt-get update \
+ && apt-get upgrade -y \
+ && apt-get --no-install-recommends install -y build-essential \
+ && rm -rf /var/lib/apt/lists/*
+
+# 2) Directorio de trabajo en el contenedor
+WORKDIR /app
+
+# 3) Copiar y instalar dependencias
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 4) Copiar el resto del código
+COPY . .
+
+# 5) Comando por defecto al arrancar el contenedor
+CMD ["python", "inference.py"]
