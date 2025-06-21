@@ -28,7 +28,7 @@ logger.info(f"Cargando pipeline desde {MODEL_PKL}")
 pipeline = joblib.load(MODEL_PKL)
 
 # Leer datos de entrada
-INPUT_CSV = os.getenv("INPUT_CSV", "/Users/valentinrosito/Downloads/Facultad/4to Cuatri/Aprendizaje Automático 1/TP 2 Clasificacion/AA1-TUIA-Caballero-Balverdi-Rosito/docker/files/weatherAUS.csv")
+INPUT_CSV = os.getenv("INPUT_CSV", "files/input.csv") # Reemplazar con la ruta absoluta
 df_input = pd.read_csv(INPUT_CSV)
 logger.info(f"Cargado input: {df_input.shape[0]} filas")
 
@@ -41,6 +41,6 @@ df_out = pd.DataFrame({
 })
 
 # Guardar salida
-OUTPUT_CSV = os.getenv("OUTPUT_CSV", "/Users/valentinrosito/Downloads/Facultad/4to Cuatri/Aprendizaje Automático 1/TP 2 Clasificacion/AA1-TUIA-Caballero-Balverdi-Rosito/docker/files/output.csv")
+OUTPUT_CSV = os.getenv("OUTPUT_CSV", "files/output.csv")
 df_out.to_csv(OUTPUT_CSV, index=False)
 logger.info(f"Predicciones guardadas en {OUTPUT_CSV}")
