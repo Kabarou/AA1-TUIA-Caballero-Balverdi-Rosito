@@ -12,7 +12,7 @@ from sklearn.preprocessing import (
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from imblearn.pipeline import Pipeline
-from imblearn.under_sampling import RandomUnderSampler
+from sklearn.ensemble import RandomForestClassifier
 
 # 1) Coordenadas de cada ciudad
 coordenadas_ciudades = {
@@ -119,6 +119,32 @@ class WindDirTransformer(BaseEstimator, TransformerMixin):
             df[f'{col}_cos'] = np.cos(np.deg2rad(deg))
         return df.drop(columns=['WindGustDir','WindDir9am','WindDir3pm'])
 
+class CategoricalRFImputer(BaseEstimator, TransformerMixin):
+    def __init__(self, cat_cols, num_cols):
+        self.cat_cols = cat_cols
+        self.num_cols = num_cols
+        self.models = {}
+
+    def fit(self, X, y=None):
+        df = X.copy()
+        for col in self.cat_cols:
+            mask = df[col].notnull()
+            if mask.any():
+                X_train = df.loc[mask, self.num_cols]
+                y_train = df.loc[mask, col]
+                self.models[col] = RandomForestClassifier(n_estimators=100, random_state=42) \
+                                    .fit(X_train, y_train)
+        return self
+
+    def transform(self, X):
+        df = X.copy()
+        for col, model in self.models.items():
+            mask = df[col].isnull()
+            if mask.any():
+                X_pred = df.loc[mask, self.num_cols]
+                df.loc[mask, col] = model.predict(X_pred)
+        return df
+
 # 3) Columnas
 num_cols = ['MinTemp','MaxTemp','Rainfall','Evaporation','Sunshine',
             'WindGustSpeed','WindSpeed9am','WindSpeed3pm',
@@ -135,49 +161,38 @@ numeric_pipeline = Pipeline([
                                    include_bias=False))
 ])
 categorical_pipeline = Pipeline([
-    ('imputer', SimpleImputer(strategy='most_frequent')),
-    ('onehot',  OneHotEncoder(handle_unknown='ignore'))
+    ('onehot', OneHotEncoder(handle_unknown='ignore'))
 ])
 preprocessor = ColumnTransformer([
-    ('num', numeric_pipeline,   num_cols),
+    ('num', numeric_pipeline, num_cols),
     ('cat', categorical_pipeline, cat_cols),
 ], remainder='drop')
 
-# 5) Construcción del pipeline final (sin DropSparseRows)
+# 5) Construcción del pipeline final
 pipeline = Pipeline([
-    ('month',       MonthExtractor()),
-    ('coords',      AddCoordinates(coordenadas_ciudades)),
-    ('drop_null',   DropNullCoords()),
-    ('region',      AssignRegion()),
-    ('wind_dir',    WindDirTransformer()),
-    ('preproc',     preprocessor),
-    ('undersample', RandomUnderSampler(random_state=42)),
-    ('clf',         LogisticRegression(
-                        random_state=42,
-                        max_iter=1000,
-                        class_weight='balanced'
-                    ))
+    ('month',     MonthExtractor()),
+    ('coords',    AddCoordinates(coordenadas_ciudades)),
+    ('drop_null', DropNullCoords()),
+    ('region',    AssignRegion()),
+    ('wind_dir',  WindDirTransformer()),
+    ('cat_imp',   CategoricalRFImputer(cat_cols, num_cols)),  # <-- imputación RF aquí
+    ('preproc',   preprocessor),
+    ('clf',       LogisticRegression(
+                     random_state=42,
+                     max_iter=1000,
+                     class_weight='balanced'
+                 ))
 ])
 
-# 6) Carga y pre‐filtrado de datos
-DATA_CSV = os.getenv('DATA_CSV', 'files/weatherAUS.csv')
-df2 = pd.read_csv(DATA_CSV)
+if __name__ == "__main__":
+    # Sólo se ejecuta cuando corro “python docker/create_pipeline.py”
+    DATA_CSV = os.getenv("DATA_CSV", "docker/files/weatherAUS.csv")
+    df2 = pd.read_csv(DATA_CSV)
 
-# a) Quitar filas sin target y mapear target a 0/1
-df2 = df2.dropna(subset=['RainTomorrow']).copy()
-df2['RainTomorrow'] = df2['RainTomorrow'].map({'Yes':1,'No':0}).astype(int)
+    # Eliminar filas sin etiqueta
+    df2 = df2.dropna(subset=["RainTomorrow"])
 
-# b) Eliminar filas con ≥60% de nulos
-mask = df2.isna().sum(axis=1) < df2.shape[1]*0.6
-df2 = df2.loc[mask].reset_index(drop=True)
-
-# 7) Entrenar y serializar
-pipeline.fit(df2, df2['RainTomorrow'])
-
-# Evaluar el pipeline en el conjunto completo
-X_all = df2.drop(columns=['RainTomorrow'])
-y_all = df2['RainTomorrow']
-train_score = pipeline.score(X_all, y_all)
-print(f"Train score: {train_score:.4f}")
-
-joblib.dump(pipeline, 'pipeline.pkl')
+    pipeline.fit(df2, df2["RainTomorrow"])
+    MODEL_PKL = os.getenv("MODEL_PKL", "docker/pipeline.pkl")
+    joblib.dump(pipeline, MODEL_PKL)
+    print(f"Pipeline entrenado y guardado en {MODEL_PKL}")
