@@ -193,6 +193,6 @@ if __name__ == "__main__":
     df2 = df2.dropna(subset=["RainTomorrow"])
 
     pipeline.fit(df2, df2["RainTomorrow"])
-    MODEL_PKL = os.getenv("MODEL_PKL", "docker/pipeline.pkl")
+    MODEL_PKL = os.getenv("MODEL_PKL", "docker/files/pipeline.pkl")
     joblib.dump(pipeline, MODEL_PKL)
     print(f"Pipeline entrenado y guardado en {MODEL_PKL}")

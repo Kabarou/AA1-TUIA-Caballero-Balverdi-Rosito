@@ -16,7 +16,7 @@ Este repositorio contiene un pipeline en Python para la clasificación de lluvia
 
 3. Desde la raíz del repositorio, construye la imagen:
     ```bash
-    docker build -t aa1-clasificacion:latest docker
+    docker build   -t aa1-clasificacion:latest   -f docker/dockerfile .
     ```
 
 4. Copia tu fichero de entrada (`input.csv`) en `docker/files/` (o usa el que ya está: `docker/files/input.csv`).
@@ -24,11 +24,12 @@ Este repositorio contiene un pipeline en Python para la clasificación de lluvia
 5. Ejecuta el contenedor, montando la carpeta `files` para las entradas y salidas:
     ```bash
     docker run --rm \
-      -v $(pwd)/docker/files:/app/files \
-      -e MODEL_PKL=docker/pipeline.pkl \
-      -e INPUT_CSV=docker/files/input.csv \
-      -e OUTPUT_CSV=docker/files/output.csv \
-      aa1-clasificacion:latest
+    -m 4g \
+    -v "$(pwd)/docker/files:/app/docker/files" \
+    -e MODEL_PKL=/app/docker/files/pipeline.pkl \
+    -e INPUT_CSV=/app/docker/files/input.csv \
+    -e OUTPUT_CSV=/app/docker/files/output.csv \
+    aa1-clasificacion:latest
     ```
     - Esto leerá `docker/files/input.csv` dentro del contenedor.  
     - Las predicciones se volcarán en `docker/files/output.csv` en tu máquina.

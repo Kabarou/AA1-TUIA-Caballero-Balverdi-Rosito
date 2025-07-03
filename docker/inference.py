@@ -24,7 +24,7 @@ ch.setFormatter(fmt)
 logger.addHandler(ch)
 
 # Ruta al pipeline serializado
-MODEL_PKL = os.getenv("MODEL_PKL", "docker/pipeline.pkl")
+MODEL_PKL = os.getenv("MODEL_PKL", "docker/files/pipeline.pkl")
 logger.info(f"Cargando pipeline desde {MODEL_PKL}")
 pipeline = joblib.load(MODEL_PKL)
 

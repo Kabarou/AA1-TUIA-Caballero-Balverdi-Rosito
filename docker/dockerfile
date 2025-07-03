@@ -9,12 +9,13 @@ RUN apt-get update \
 # 2) Directorio de trabajo en el contenedor
 WORKDIR /app
 
-# 3) Copiar y instalar dependencias
-COPY requirements.txt ./
+# 3) Copiar y instalar dependencia
+COPY docker/requirements.txt ./requirements.txt
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 4) Copiar el resto del código
 COPY . .
 
 # 5) Comando por defecto al arrancar el contenedor
-CMD ["python", "inference.py"]
+CMD ["python", "docker/inference.py"]
